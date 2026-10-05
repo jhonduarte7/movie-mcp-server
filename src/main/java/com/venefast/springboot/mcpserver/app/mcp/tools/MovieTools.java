@@ -1,7 +1,9 @@
 package com.venefast.springboot.mcpserver.app.mcp.tools;
 
+import com.venefast.springboot.mcpserver.app.models.dtos.MovieCatalogDto;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieCreateDto;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieDto;
+import com.venefast.springboot.mcpserver.app.models.dtos.MovieScheduleDto;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieUpdateDto;
 import com.venefast.springboot.mcpserver.app.services.MovieService;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -10,18 +12,127 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
- * MCP Tools for movie management (creation, update, deletion).
- * Delegates to specialized MovieCreateDto and MovieUpdateDto contracts.
+ * MCP Tools dedicated to Movie entity operations:
+ * Browsing, searching, screening schedules, and full CRUD lifecycle management.
  */
 @Component
-public class MovieManagementTools {
+public class MovieTools {
 
     private final MovieService movieService;
 
-    public MovieManagementTools(MovieService movieService) {
+    public MovieTools(MovieService movieService) {
         this.movieService = movieService;
+    }
+
+    /**
+     * MCP Tool: Searches movies by title keyword.
+     */
+    @McpTool(
+        name = "searchMoviesByTitle",
+        description = "Search for movies in the catalog whose title matches or contains the given query."
+    )
+    public List<MovieDto> searchMoviesByTitle(
+        @McpToolParam(description = "The title or partial title to search for (e.g. Inception)", required = true)
+        String query
+    ) {
+        return movieService.searchByTitle(query);
+    }
+
+    /**
+     * MCP Tool: Retrieves detailed movie information by movie ID.
+     */
+    @McpTool(
+        name = "getMovieById",
+        description = "Retrieve detailed information about a movie using its unique numeric ID."
+    )
+    public MovieDto getMovieById(
+        @McpToolParam(description = "The unique numeric ID of the movie", required = true)
+        Long id
+    ) {
+        return movieService.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("Movie not found with id: " + id));
+    }
+
+    /**
+     * MCP Tool: Retrieves highest rated movies with a minimum rating threshold.
+     */
+    @McpTool(
+        name = "getTopRatedMovies",
+        description = "Retrieve the highest rated movies in the catalog having a rating greater than or equal to the minimum rating."
+    )
+    public List<MovieDto> getTopRatedMovies(
+        @McpToolParam(description = "Minimum rating threshold between 0.0 and 10.0 (defaults to 8.0)", required = false)
+        Double minRating
+    ) {
+        double threshold = (minRating != null) ? minRating : 8.0;
+        return movieService.findTopRated(threshold);
+    }
+
+    /**
+     * MCP Tool: Lists all movies currently in the catalog.
+     */
+    @McpTool(
+        name = "getAllMovies",
+        description = "List all movies currently available in the catalog."
+    )
+    public List<MovieDto> getAllMovies() {
+        return movieService.findAll();
+    }
+
+    /**
+     * MCP Tool: Lists a lightweight catalog summary of all movies.
+     */
+    @McpTool(
+        name = "getCatalogOverview",
+        description = "Retrieve a simplified catalog overview containing movie title, duration, genres, audience classification, and rating."
+    )
+    public List<MovieCatalogDto> getCatalogOverview() {
+        return movieService.findCatalogMovies();
+    }
+
+    /**
+     * MCP Tool: Retrieves screening showtimes and schedules for a movie by ID.
+     */
+    @McpTool(
+        name = "getMovieSchedules",
+        description = "Retrieve the screening showtimes and schedules for a specific movie by its ID."
+    )
+    public List<String> getMovieSchedules(
+        @McpToolParam(description = "The unique numeric ID of the movie", required = true)
+        Long id
+    ) {
+        return movieService.getMovieSchedules(id);
+    }
+
+    /**
+     * MCP Tool: Retrieves structured schedule details DTO for a movie by ID.
+     */
+    @McpTool(
+        name = "getMovieScheduleDetails",
+        description = "Retrieve structured movie schedule details including title, duration, audience rating, and showtimes by movie ID."
+    )
+    public MovieScheduleDto getMovieScheduleDetails(
+        @McpToolParam(description = "The unique numeric ID of the movie", required = true)
+        Long id
+    ) {
+        return movieService.getMovieScheduleDetails(id);
+    }
+
+    /**
+     * MCP Tool: Searches for a movie by title and retrieves its screening showtimes.
+     */
+    @McpTool(
+        name = "getMovieScheduleByTitle",
+        description = "Retrieve screening showtimes and schedule details for a movie searching by title. If the movie does not exist, returns a clear explanatory message."
+    )
+    public String getMovieScheduleByTitle(
+        @McpToolParam(description = "The movie title to search for (e.g. Inception, Moana 2)", required = true)
+        String title
+    ) {
+        return movieService.getMovieScheduleByTitle(title);
     }
 
     /**

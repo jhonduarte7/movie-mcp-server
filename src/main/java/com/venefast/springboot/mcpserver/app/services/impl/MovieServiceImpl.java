@@ -69,9 +69,25 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Override
+    public List<String> findAllGenres() {
+        return genreRepository.findAll().stream()
+            .map(Genre::getName)
+            .sorted()
+            .toList();
+    }
+
+    @Override
     public List<MovieDto> findByGenre(String genre) {
         return movieRepository.findByGenreIgnoreCase(genre).stream()
             .map(movieMapper::toDto)
+            .toList();
+    }
+
+    @Override
+    public List<String> findAllAudiences() {
+        return audienceRepository.findAll().stream()
+            .map(Audience::getName)
+            .sorted()
             .toList();
     }
 

@@ -7,8 +7,8 @@ A Spring Boot 4 application leveraging **Spring AI 2.0.1** and **Java 25** to ex
 ## 🌟 Highlights
 
 - **Spring Boot 4.1.0 & Java 25**: Utilizes the latest LTS release and current Spring Boot 4 framework features.
-- **Spring AI Model Context Protocol (MCP)**: Native integration using `spring-ai-starter-mcp-server-webmvc`. Exposes 12 tools, 1 resource, and 1 prompt template over Streamable HTTP transport at `/mcp`.
-- **Modular MCP Tool Beans**: Decentralized tool layer with 4 dedicated `@Component` beans (`MovieCatalogTools`, `MovieScheduleTools`, `MovieManagementTools`, `MovieRecommendationTools`).
+- **Spring AI Model Context Protocol (MCP)**: Native integration using `spring-ai-starter-mcp-server-webmvc`. Exposes 15 tools, 1 resource, and 1 prompt template over Streamable HTTP transport at `/mcp`.
+- **Entity-Based MCP Tool Beans**: Decentralized tool layer with 4 dedicated `@Component` beans (`MovieTools`, `GenreTools`, `AudienceTools`, `MovieRecommendationTools`).
 - **Specialized Task-Based DTOs**: Segregated contracts by role (`MovieCatalogDto`, `MovieScheduleDto`, `MovieCreateDto`, `MovieUpdateDto`, and `MovieDto`).
 - **Normalized Data Architecture**: Relational JPA entities (`Movie`, `Genre`, `Audience`) with screening showtimes collection.
 - **Strict Layered Architecture**: Clear separation of concerns:
@@ -18,7 +18,7 @@ A Spring Boot 4 application leveraging **Spring AI 2.0.1** and **Java 25** to ex
   - **Mappers**: Dedicated `@Component` bidirectional converters between entities and DTO records.
   - **Models**: JPA `@Entity` with audit lifecycle callbacks, and immutable `record` DTOs with Bean Validation.
 - **In-Memory H2 Database**: Pre-seeded on startup with 10 classic movies with normalized categories, audience classifications, and screening showtimes.
-- **Comprehensive Test Coverage**: 57 automated tests covering controllers, services, repositories, mappers, and MCP tools with 100% pass rate.
+- **Comprehensive Test Coverage**: 64 automated tests covering controllers, services, repositories, mappers, and MCP tools with 100% pass rate.
 
 ---
 
@@ -35,10 +35,10 @@ src/main/java/com/venefast/springboot/mcpserver/app/
 │   └── MovieMapper.java
 ├── mcp/
 │   └── tools/
-│       ├── MovieCatalogTools.java
-│       ├── MovieManagementTools.java
-│       ├── MovieRecommendationTools.java
-│       └── MovieScheduleTools.java
+│       ├── MovieTools.java                  # Movie entity operations (@McpTool)
+│       ├── GenreTools.java                  # Genre entity operations (@McpTool)
+│       ├── AudienceTools.java               # Audience entity operations (@McpTool)
+│       └── MovieRecommendationTools.java    # AI recommendation prompt & resource (@McpPrompt, @McpResource)
 ├── models/
 │   ├── dtos/
 │   │   ├── MovieDto.java
@@ -64,10 +64,10 @@ src/main/java/com/venefast/springboot/mcpserver/app/
 
 | DTO Record | Path | Associated Tool Component | Responsibility |
 | :--- | :--- | :--- | :--- |
-| `MovieCatalogDto` | `models/dtos/MovieCatalogDto.java` | `MovieCatalogTools` | Lightweight browsing, filtering, and summary overviews |
-| `MovieScheduleDto` | `models/dtos/MovieScheduleDto.java` | `MovieScheduleTools` | Structured showtimes, schedules, and contextual availability messages |
-| `MovieCreateDto` | `models/dtos/MovieCreateDto.java` | `MovieManagementTools` | Creation command contract with Bean Validation constraints |
-| `MovieUpdateDto` | `models/dtos/MovieUpdateDto.java` | `MovieManagementTools` | Update command contract with Bean Validation constraints |
+| `MovieCatalogDto` | `models/dtos/MovieCatalogDto.java` | `MovieTools` | Lightweight browsing, filtering, and summary overviews |
+| `MovieScheduleDto` | `models/dtos/MovieScheduleDto.java` | `MovieTools` | Structured showtimes, schedules, and contextual availability messages |
+| `MovieCreateDto` | `models/dtos/MovieCreateDto.java` | `MovieTools` | Creation command contract with Bean Validation constraints |
+| `MovieUpdateDto` | `models/dtos/MovieUpdateDto.java` | `MovieTools` | Update command contract with Bean Validation constraints |
 | `MovieDto` | `models/dtos/MovieDto.java` | `MovieController` & Base | Full canonical representation for REST endpoints and backwards compatibility |
 
 ---
@@ -111,23 +111,26 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 ```
 
 ### Available MCP Capabilities
-
-| Type | Name / URI | Description |
-| :--- | :--- | :--- |
-| **Tool** | `searchMoviesByTitle` | Search movies matching a title keyword. |
-| **Tool** | `getMovieById` | Retrieve movie details by ID. |
-| **Tool** | `getMoviesByGenre` | Find movies belonging to a genre (Sci-Fi, Drama, etc.). |
-| **Tool** | `getTopRatedMovies` | Retrieve movies with rating >= threshold. |
-| **Tool** | `getAllMovies` | List all movies in the database. |
-| **Tool** | `getCatalogOverview` | List simplified movie overviews (`MovieCatalogDto`) with title, duration, genres, audience, and rating. |
-| **Tool** | `getMovieSchedules` | Retrieve screening showtimes and schedules for a movie by ID. |
-| **Tool** | `getMovieScheduleDetails` | Retrieve structured movie showtimes and screening details (`MovieScheduleDto`) by movie ID. |
-| **Tool** | `mcp_getMovieSchedule` | Search movie by title (case-insensitive) and retrieve schedules or non-existence message. |
-| **Tool** | `addMovie` | Register a new movie into the catalog via `MovieCreateDto`. |
-| **Tool** | `updateMovie` | Update an existing movie by its ID in the catalog via `MovieUpdateDto`. |
-| **Tool** | `deleteMovie` | Delete a movie by its ID. |
-| **Resource** | `movies://catalog` | Plain-text snapshot of the entire movie catalog with categories and showtimes. |
-| **Prompt** | `movieRecommendationPrompt` | Prompt template for film recommendations by genre and schedules. |
+ 
+| Type | Name / URI | Component | Description |
+| :--- | :--- | :--- | :--- |
+| **Tool** | `searchMoviesByTitle` | `MovieTools` | Search movies matching a title keyword. |
+| **Tool** | `getMovieById` | `MovieTools` | Retrieve complete movie details by unique ID. |
+| **Tool** | `getTopRatedMovies` | `MovieTools` | Retrieve movies with rating >= threshold. |
+| **Tool** | `getAllMovies` | `MovieTools` | List all movies in the database. |
+| **Tool** | `getCatalogOverview` | `MovieTools` | List simplified movie overviews (`MovieCatalogDto`) with title, duration, genres, audience, and rating. |
+| **Tool** | `getMovieSchedules` | `MovieTools` | Retrieve screening showtimes and schedules for a movie by ID. |
+| **Tool** | `getMovieScheduleDetails` | `MovieTools` | Retrieve structured movie showtimes and screening details (`MovieScheduleDto`) by movie ID. |
+| **Tool** | `getMovieScheduleByTitle` | `MovieTools` | Search movie by title and retrieve screening schedules or non-existence message. |
+| **Tool** | `addMovie` | `MovieTools` | Register a new movie into the catalog via `MovieCreateDto`. |
+| **Tool** | `updateMovie` | `MovieTools` | Update an existing movie by its ID in the catalog via `MovieUpdateDto`. |
+| **Tool** | `deleteMovie` | `MovieTools` | Delete a movie by its ID. |
+| **Tool** | `getAllGenres` | `GenreTools` | Retrieve all distinct genres/categories in the catalog. |
+| **Tool** | `getMoviesByGenre` | `GenreTools` | Find movies belonging to a genre (Sci-Fi, Drama, etc.). |
+| **Tool** | `getAllAudiences` | `AudienceTools` | Retrieve all distinct audience age classifications in the catalog. |
+| **Tool** | `getMoviesByAudience` | `AudienceTools` | Retrieve movies filtered by audience classification (PG-13, TE, etc.). |
+| **Resource** | `movies://catalog` | `MovieRecommendationTools` | Plain-text snapshot of the entire movie catalog with categories and showtimes. |
+| **Prompt** | `movieRecommendationPrompt` | `MovieRecommendationTools` | Prompt template for film recommendations by genre and schedules. |
 
 ---
 
@@ -138,7 +141,9 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 | `GET` | `/api/movies` | List all movies |
 | `GET` | `/api/movies/{id}` | Get movie by ID |
 | `GET` | `/api/movies/search?title={query}` | Search movies by title |
+| `GET` | `/api/movies/genres` | List all available movie genres |
 | `GET` | `/api/movies/genre/{genre}` | Filter movies by genre |
+| `GET` | `/api/movies/audiences` | List all available audience classifications |
 | `GET` | `/api/movies/audience/{audience}` | Filter movies by audience classification |
 | `GET` | `/api/movies/{id}/schedules` | Get screening showtimes for a movie by ID |
 | `GET` | `/api/movies/schedule?title={title}` | Get screening showtimes for a movie by title (case-insensitive) |

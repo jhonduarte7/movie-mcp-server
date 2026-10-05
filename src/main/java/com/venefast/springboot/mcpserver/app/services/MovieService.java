@@ -38,12 +38,26 @@ public interface MovieService {
     Optional<MovieDto> findById(Long id);
 
     /**
+     * Retrieves all distinct genre names in the catalog.
+     *
+     * @return list of genre names sorted alphabetically
+     */
+    List<String> findAllGenres();
+
+    /**
      * Finds movies by genre/category.
      *
      * @param genre genre name
      * @return list of matching movie DTOs
      */
     List<MovieDto> findByGenre(String genre);
+
+    /**
+     * Retrieves all distinct audience classification names in the catalog.
+     *
+     * @return list of audience names sorted alphabetically
+     */
+    List<String> findAllAudiences();
 
     /**
      * Searches movies whose title contains the query string.

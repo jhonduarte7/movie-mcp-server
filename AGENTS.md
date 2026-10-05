@@ -42,17 +42,17 @@ src/main/java/com/venefast/springboot/mcpserver/app/
 │   └── MovieMapper.java                     # Dedicated @Component bidirectional Entity-DTO converter
 ├── mcp/
 │   └── tools/
-│       ├── MovieCatalogTools.java           # Catalog browsing, search, and details (@McpTool)
-│       ├── MovieManagementTools.java        # Creation, updates, and deletion (@McpTool)
-│       ├── MovieRecommendationTools.java    # Recommendations prompt & catalog resource (@McpPrompt, @McpResource)
-│       └── MovieScheduleTools.java          # Showtimes and screening schedules query tools (@McpTool)
+│       ├── MovieTools.java                  # Movie entity operations: search, browsing, schedules, CRUD (@McpTool)
+│       ├── GenreTools.java                  # Genre entity operations: list genres, filter by genre (@McpTool)
+│       ├── AudienceTools.java               # Audience entity operations: list audiences, filter by audience (@McpTool)
+│       └── MovieRecommendationTools.java    # AI recommendation prompt & catalog resource (@McpPrompt, @McpResource)
 ├── models/
 │   ├── dtos/
 │   │   ├── MovieDto.java                    # Baseline immutable Java record payload contract
-│   │   ├── MovieCatalogDto.java             # Specialized browsing & search DTO for MovieCatalogTools
-│   │   ├── MovieScheduleDto.java            # Specialized showtimes & schedule DTO for MovieScheduleTools
-│   │   ├── MovieCreateDto.java              # Creation command contract for MovieManagementTools
-│   │   └── MovieUpdateDto.java              # Update command contract for MovieManagementTools
+│   │   ├── MovieCatalogDto.java             # Specialized browsing & search DTO
+│   │   ├── MovieScheduleDto.java            # Specialized showtimes & schedule DTO
+│   │   ├── MovieCreateDto.java              # Creation command contract for MovieTools
+│   │   └── MovieUpdateDto.java              # Update command contract for MovieTools
 │   └── entities/
 │       ├── Audience.java                    # JPA persistence entity mapping table 'audiences'
 │       ├── Genre.java                       # JPA persistence entity mapping table 'genres'
@@ -73,25 +73,34 @@ src/main/java/com/venefast/springboot/mcpserver/app/
 
 Exposed over Streamable HTTP transport at endpoint `POST /mcp`:
 
-### 4.1 Tools (`@McpTool`)
-- **`searchMoviesByTitle`**: Searches movies in the catalog by keyword query (`MovieCatalogTools`).
-- **`getMovieById`**: Retrieves complete movie details given its unique numeric identifier (`MovieCatalogTools`).
-- **`getMoviesByGenre`**: Filters movies matching a specific genre / category (`MovieCatalogTools`).
-- **`getTopRatedMovies`**: Retrieves movies meeting or exceeding a minimum rating score (`MovieCatalogTools`).
-- **`getAllMovies`**: Lists all available movies in the catalog (`MovieCatalogTools`).
-- **`getCatalogOverview`**: Lists a simplified catalog overview with title, duration, genres, audience, and rating using `MovieCatalogDto` (`MovieCatalogTools`).
-- **`getMovieSchedules`**: Retrieves screening showtimes and schedules for a movie by its ID (`MovieScheduleTools`).
-- **`getMovieScheduleDetails`**: Retrieves structured schedule details using `MovieScheduleDto` by movie ID (`MovieScheduleTools`).
-- **`mcp_getMovieSchedule`**: Searches for a movie by name/title (case-insensitive) and returns its screening schedules, or an explanatory message if not found (`MovieScheduleTools`).
-- **`addMovie`**: Inserts a new movie record into the database via `MovieCreateDto` (`MovieManagementTools`).
-- **`updateMovie`**: Updates an existing movie record in the database via `MovieUpdateDto` (`MovieManagementTools`).
-- **`deleteMovie`**: Deletes a movie record by its identifier (`MovieManagementTools`).
+### 4.1 Tools (`@McpTool`) - Organized by Entity
+
+#### Movie Entity Tools (`MovieTools`)
+- **`searchMoviesByTitle`**: Searches movies in the catalog by keyword query.
+- **`getMovieById`**: Retrieves complete movie details given its unique numeric identifier.
+- **`getTopRatedMovies`**: Retrieves movies meeting or exceeding a minimum rating score.
+- **`getAllMovies`**: Lists all available movies in the catalog.
+- **`getCatalogOverview`**: Lists a simplified catalog overview with title, duration, genres, audience, and rating using `MovieCatalogDto`.
+- **`getMovieSchedules`**: Retrieves screening showtimes and schedules for a movie by its ID.
+- **`getMovieScheduleDetails`**: Retrieves structured schedule details using `MovieScheduleDto` by movie ID.
+- **`getMovieScheduleByTitle`**: Retrieves screening showtimes and schedule details for a movie searching by title.
+- **`addMovie`**: Inserts a new movie record into the database via `MovieCreateDto`.
+- **`updateMovie`**: Updates an existing movie record in the database via `MovieUpdateDto`.
+- **`deleteMovie`**: Deletes a movie record by its identifier.
+
+#### Genre Entity Tools (`GenreTools`)
+- **`getAllGenres`**: Lists all distinct movie genres/categories available in the catalog.
+- **`getMoviesByGenre`**: Filters movies matching a specific genre / category.
+
+#### Audience Entity Tools (`AudienceTools`)
+- **`getAllAudiences`**: Lists all distinct audience age classifications available in the catalog.
+- **`getMoviesByAudience`**: Filters movies matching a specific audience classification rating.
 
 ### 4.2 Resources (`@McpResource`)
-- **`movies://catalog`**: Returns an up-to-date formatted plain-text catalog summary of all movies with categories and showtimes.
+- **`movies://catalog`**: Returns an up-to-date formatted plain-text catalog summary of all movies with categories and showtimes (`MovieRecommendationTools`).
 
 ### 4.3 Prompts (`@McpPrompt`)
-- **`movieRecommendationPrompt`**: Generates a tailored movie recommendation prompt for LLMs based on genre preference and the active database catalog.
+- **`movieRecommendationPrompt`**: Generates a tailored movie recommendation prompt for LLMs based on genre preference and the active database catalog (`MovieRecommendationTools`).
 
 ---
 
@@ -100,7 +109,9 @@ Exposed over Streamable HTTP transport at endpoint `POST /mcp`:
 - `GET /api/movies` - List all movies
 - `GET /api/movies/{id}` - Get movie by ID
 - `GET /api/movies/search?title={query}` - Search movies by title
+- `GET /api/movies/genres` - List all available movie genres
 - `GET /api/movies/genre/{genre}` - Filter movies by genre
+- `GET /api/movies/audiences` - List all available audience classifications
 - `GET /api/movies/audience/{audience}` - Filter movies by audience classification
 - `GET /api/movies/{id}/schedules` - Get screening showtimes for a movie by ID
 - `GET /api/movies/schedule?title={title}` - Get screening showtimes for a movie by title (case-insensitive)
@@ -138,8 +149,8 @@ mvnw.cmd test
 | Evaluation Dimension | Status | Notes & Verification |
 | :--- | :---: | :--- |
 | **Layer Separation & Boundaries** | ✅ **Passed** | Strict separation: Controllers and MCP Tools interact strictly with DTO records; JPA entities are confined to the persistence/service boundary via `MovieMapper`. |
+| **Entity-Based Tools Organization** | ✅ **Passed** | MCP Tools mapped directly to the domain entities (`MovieTools`, `GenreTools`, `AudienceTools`) plus specialized AI capabilities (`MovieRecommendationTools`). |
 | **DTO Modularization & Task Segregation** | ✅ **Passed** | Fully modularized DTO layer (`MovieCatalogDto`, `MovieScheduleDto`, `MovieCreateDto`, `MovieUpdateDto`, `MovieDto`) aligning contract responsibility directly with tool roles. |
-| **MCP Modular Tool Architecture** | ✅ **Passed** | Replaced monolithic tools with 4 dedicated `@Component` beans (`MovieCatalogTools`, `MovieScheduleTools`, `MovieManagementTools`, `MovieRecommendationTools`) discovered automatically by Spring AI. |
 | **Normalized Relational Model** | ✅ **Passed** | Relational mapping for `Movie`, `Genre`, `Audience`, and `movie_schedules` with bidirectional conversion and seed caching. |
 | **Case-Insensitive Resolution** | ✅ **Passed** | Implemented case-insensitive title and genre search algorithms with fallback fuzzy matching and clear non-existence feedback. |
 | **Validation & Safety** | ✅ **Passed** | Bean Validation constraints applied on DTO commands (`@NotBlank`, `@Size`, `@Min`, `@Max`, `@DecimalMin`, `@DecimalMax`). |
@@ -147,12 +158,13 @@ mvnw.cmd test
 
 ### 7.2 Automated Test Coverage & Verification
 
-- **Total Test Suite**: 57 automated tests
-- **Pass Rate**: 100% (57 passed, 0 failures, 0 errors, 0 skipped)
+- **Total Test Suite**: 64 automated tests
+- **Pass Rate**: 100% (64 passed, 0 failures, 0 errors, 0 skipped)
 - **Suite Breakdown**:
   - `MovieMcpServerApplicationTests` (1 test): Spring Boot 4.1.0 context bootstrapping and Spring AI MCP server registration.
-  - `MovieControllerTest` (10 tests): HTTP status codes, JSON serialization, query filtering, and request body validation.
-  - `MovieServiceTest` (22 tests): Full transactional business logic, CRUD operations, schedule resolution, and specialized DTO contracts.
+  - `MovieControllerTest` (12 tests): HTTP status codes, JSON serialization, query filtering, genres, audiences, and request validation.
+  - `MovieServiceTest` (24 tests): Full transactional business logic, CRUD operations, genres/audiences listing, schedule resolution, and specialized DTO contracts.
   - `MovieMapperTest` (10 tests): Bidirectional entity-DTO conversions, normalized field mapping, and in-place entity updates.
-  - `MovieMcpToolsTest` (14 tests): Verification of all 12 MCP tools, 1 resource, and 1 prompt across the 4 modular tool beans.
+  - `MovieMcpToolsTest` (17 tests): Verification of all 15 MCP tools, 1 resource, and 1 prompt across `MovieTools`, `GenreTools`, `AudienceTools`, and `MovieRecommendationTools`.
+
 

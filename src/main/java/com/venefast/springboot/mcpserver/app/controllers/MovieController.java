@@ -66,6 +66,16 @@ public class MovieController {
     }
 
     /**
+     * Retrieves all available movie genres in the catalog.
+     *
+     * @return 200 OK with list of genre names
+     */
+    @GetMapping("/genres")
+    public ResponseEntity<List<String>> getAllGenres() {
+        return ResponseEntity.ok(movieService.findAllGenres());
+    }
+
+    /**
      * Filters movies by genre / category.
      *
      * @param genre genre name
@@ -74,6 +84,16 @@ public class MovieController {
     @GetMapping("/genre/{genre}")
     public ResponseEntity<List<MovieDto>> getMoviesByGenre(@PathVariable String genre) {
         return ResponseEntity.ok(movieService.findByGenre(genre));
+    }
+
+    /**
+     * Retrieves all available audience classifications in the catalog.
+     *
+     * @return 200 OK with list of audience classification names
+     */
+    @GetMapping("/audiences")
+    public ResponseEntity<List<String>> getAllAudiences() {
+        return ResponseEntity.ok(movieService.findAllAudiences());
     }
 
     /**

@@ -356,4 +356,28 @@ class MovieServiceTest {
         assertEquals(9.1, result.rating());
         verify(movieRepository).save(sampleEntity);
     }
+
+    @Test
+    @DisplayName("Should return all genres sorted")
+    void shouldFindAllGenres() {
+        when(genreRepository.findAll()).thenReturn(List.of(new Genre("Sci-Fi"), new Genre("Action")));
+
+        List<String> genres = movieService.findAllGenres();
+
+        assertEquals(2, genres.size());
+        assertEquals("Action", genres.get(0));
+        assertEquals("Sci-Fi", genres.get(1));
+    }
+
+    @Test
+    @DisplayName("Should return all audiences sorted")
+    void shouldFindAllAudiences() {
+        when(audienceRepository.findAll()).thenReturn(List.of(new Audience("R"), new Audience("PG-13")));
+
+        List<String> audiences = movieService.findAllAudiences();
+
+        assertEquals(2, audiences.size());
+        assertEquals("PG-13", audiences.get(0));
+        assertEquals("R", audiences.get(1));
+    }
 }

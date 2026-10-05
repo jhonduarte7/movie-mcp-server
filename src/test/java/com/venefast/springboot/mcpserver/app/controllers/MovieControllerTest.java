@@ -171,4 +171,26 @@ class MovieControllerTest {
         mockMvc.perform(delete("/api/movies/{id}", 1L))
             .andExpect(status().isNoContent());
     }
+
+    @Test
+    @DisplayName("GET /api/movies/genres should return list of genres")
+    void shouldReturnAllGenres() throws Exception {
+        when(movieService.findAllGenres()).thenReturn(List.of("Action", "Drama", "Sci-Fi"));
+
+        mockMvc.perform(get("/api/movies/genres"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0]").value("Action"));
+    }
+
+    @Test
+    @DisplayName("GET /api/movies/audiences should return list of audiences")
+    void shouldReturnAllAudiences() throws Exception {
+        when(movieService.findAllAudiences()).thenReturn(List.of("PG-13", "R", "TE - Todo Espectador"));
+
+        mockMvc.perform(get("/api/movies/audiences"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0]").value("PG-13"));
+    }
 }

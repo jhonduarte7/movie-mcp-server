@@ -1,9 +1,9 @@
 package com.venefast.springboot.mcpserver.app.mcp;
 
-import com.venefast.springboot.mcpserver.app.mcp.tools.MovieCatalogTools;
-import com.venefast.springboot.mcpserver.app.mcp.tools.MovieManagementTools;
+import com.venefast.springboot.mcpserver.app.mcp.tools.AudienceTools;
+import com.venefast.springboot.mcpserver.app.mcp.tools.GenreTools;
 import com.venefast.springboot.mcpserver.app.mcp.tools.MovieRecommendationTools;
-import com.venefast.springboot.mcpserver.app.mcp.tools.MovieScheduleTools;
+import com.venefast.springboot.mcpserver.app.mcp.tools.MovieTools;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieCatalogDto;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieCreateDto;
 import com.venefast.springboot.mcpserver.app.models.dtos.MovieDto;
@@ -30,24 +30,24 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Modular MCP Tools Unit Tests")
+@DisplayName("Modular Entity-Based MCP Tools Unit Tests")
 class MovieMcpToolsTest {
 
     @Mock
     private MovieService movieService;
 
-    private MovieCatalogTools catalogTools;
-    private MovieScheduleTools scheduleTools;
-    private MovieManagementTools managementTools;
+    private MovieTools movieTools;
+    private GenreTools genreTools;
+    private AudienceTools audienceTools;
     private MovieRecommendationTools recommendationTools;
 
     private MovieDto sampleMovie;
 
     @BeforeEach
     void setUp() {
-        catalogTools = new MovieCatalogTools(movieService);
-        scheduleTools = new MovieScheduleTools(movieService);
-        managementTools = new MovieManagementTools(movieService);
+        movieTools = new MovieTools(movieService);
+        genreTools = new GenreTools(movieService);
+        audienceTools = new AudienceTools(movieService);
         recommendationTools = new MovieRecommendationTools(movieService);
 
         sampleMovie = new MovieDto(
@@ -61,12 +61,16 @@ class MovieMcpToolsTest {
         );
     }
 
+    // ==========================================
+    // MovieTools Tests
+    // ==========================================
+
     @Test
     @DisplayName("searchMoviesByTitle MCP tool should return matching movies")
     void testSearchMoviesByTitle() {
         when(movieService.searchByTitle("Inception")).thenReturn(List.of(sampleMovie));
 
-        List<MovieDto> result = catalogTools.searchMoviesByTitle("Inception");
+        List<MovieDto> result = movieTools.searchMoviesByTitle("Inception");
 
         assertEquals(1, result.size());
         assertEquals("Inception", result.get(0).title());
@@ -77,7 +81,7 @@ class MovieMcpToolsTest {
     void testGetMovieById() {
         when(movieService.findById(1L)).thenReturn(Optional.of(sampleMovie));
 
-        MovieDto result = catalogTools.getMovieById(1L);
+        MovieDto result = movieTools.getMovieById(1L);
 
         assertNotNull(result);
         assertEquals(1L, result.id());
@@ -88,18 +92,7 @@ class MovieMcpToolsTest {
     void testGetMovieByIdNotFound() {
         when(movieService.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> catalogTools.getMovieById(99L));
-    }
-
-    @Test
-    @DisplayName("getMoviesByGenre MCP tool should filter by genre")
-    void testGetMoviesByGenre() {
-        when(movieService.findByGenre("Sci-Fi")).thenReturn(List.of(sampleMovie));
-
-        List<MovieDto> result = catalogTools.getMoviesByGenre("Sci-Fi");
-
-        assertEquals(1, result.size());
-        assertEquals("Sci-Fi", result.get(0).genre());
+        assertThrows(NoSuchElementException.class, () -> movieTools.getMovieById(99L));
     }
 
     @Test
@@ -107,7 +100,7 @@ class MovieMcpToolsTest {
     void testGetTopRatedMovies() {
         when(movieService.findTopRated(8.5)).thenReturn(List.of(sampleMovie));
 
-        List<MovieDto> result = catalogTools.getTopRatedMovies(8.5);
+        List<MovieDto> result = movieTools.getTopRatedMovies(8.5);
 
         assertEquals(1, result.size());
         assertEquals(8.8, result.get(0).rating());
@@ -118,7 +111,7 @@ class MovieMcpToolsTest {
     void testGetAllMovies() {
         when(movieService.findAll()).thenReturn(List.of(sampleMovie));
 
-        List<MovieDto> result = catalogTools.getAllMovies();
+        List<MovieDto> result = movieTools.getAllMovies();
 
         assertEquals(1, result.size());
     }
@@ -129,7 +122,7 @@ class MovieMcpToolsTest {
         MovieCatalogDto catalogDto = new MovieCatalogDto(1L, "Inception", "148 min", List.of("Sci-Fi"), "PG-13", 8.8);
         when(movieService.findCatalogMovies()).thenReturn(List.of(catalogDto));
 
-        List<MovieCatalogDto> result = catalogTools.getCatalogOverview();
+        List<MovieCatalogDto> result = movieTools.getCatalogOverview();
 
         assertEquals(1, result.size());
         assertEquals("Inception", result.get(0).title());
@@ -141,7 +134,7 @@ class MovieMcpToolsTest {
     void testGetMovieSchedules() {
         when(movieService.getMovieSchedules(1L)).thenReturn(List.of("14:00", "17:15", "20:30"));
 
-        List<String> schedules = scheduleTools.getMovieSchedules(1L);
+        List<String> schedules = movieTools.getMovieSchedules(1L);
 
         assertEquals(3, schedules.size());
         assertTrue(schedules.contains("14:00"));
@@ -154,7 +147,7 @@ class MovieMcpToolsTest {
         MovieScheduleDto scheduleDto = MovieScheduleDto.of("Inception", "148 min", "PG-13", List.of("14:00", "17:15"));
         when(movieService.getMovieScheduleDetails(1L)).thenReturn(scheduleDto);
 
-        MovieScheduleDto result = scheduleTools.getMovieScheduleDetails(1L);
+        MovieScheduleDto result = movieTools.getMovieScheduleDetails(1L);
 
         assertNotNull(result);
         assertEquals("Inception", result.title());
@@ -163,12 +156,12 @@ class MovieMcpToolsTest {
     }
 
     @Test
-    @DisplayName("mcp_getMovieSchedule MCP tool should return schedules when movie exists")
-    void testMcpGetMovieScheduleFound() {
+    @DisplayName("getMovieScheduleByTitle MCP tool should return schedules when movie exists")
+    void testGetMovieScheduleByTitleFound() {
         when(movieService.getMovieScheduleByTitle("Inception"))
             .thenReturn("Screening schedules for 'Inception': 14:00, 17:15, 20:30");
 
-        String result = scheduleTools.mcp_getMovieSchedule("Inception");
+        String result = movieTools.getMovieScheduleByTitle("Inception");
 
         assertTrue(result.contains("Inception"));
         assertTrue(result.contains("14:00"));
@@ -176,12 +169,12 @@ class MovieMcpToolsTest {
     }
 
     @Test
-    @DisplayName("mcp_getMovieSchedule MCP tool should return clear non-existent message when movie not found")
-    void testMcpGetMovieScheduleNotFound() {
+    @DisplayName("getMovieScheduleByTitle MCP tool should return clear non-existent message when movie not found")
+    void testGetMovieScheduleByTitleNotFound() {
         when(movieService.getMovieScheduleByTitle("Avatar"))
             .thenReturn("The movie 'Avatar' does not exist in the catalog.");
 
-        String result = scheduleTools.mcp_getMovieSchedule("Avatar");
+        String result = movieTools.getMovieScheduleByTitle("Avatar");
 
         assertTrue(result.contains("does not exist in the catalog"));
         verify(movieService).getMovieScheduleByTitle("Avatar");
@@ -193,7 +186,7 @@ class MovieMcpToolsTest {
         MovieDto created = new MovieDto(2L, "Interstellar", "Christopher Nolan", "Sci-Fi", 2014, 8.7, "Space exploration");
         when(movieService.create(any(MovieCreateDto.class))).thenReturn(created);
 
-        MovieDto result = managementTools.addMovie("Interstellar", "Christopher Nolan", "Sci-Fi", 2014, 8.7, "Space exploration");
+        MovieDto result = movieTools.addMovie("Interstellar", "Christopher Nolan", "Sci-Fi", 2014, 8.7, "Space exploration");
 
         assertNotNull(result);
         assertEquals("Interstellar", result.title());
@@ -207,7 +200,7 @@ class MovieMcpToolsTest {
         MovieDto updated = new MovieDto(1L, "Inception - Remastered", "Christopher Nolan", "Sci-Fi", 2010, 9.0, "Updated synopsis");
         when(movieService.update(any(Long.class), any(MovieUpdateDto.class))).thenReturn(updated);
 
-        MovieDto result = managementTools.updateMovie(1L, "Inception - Remastered", "Christopher Nolan", "Sci-Fi", 2010, 9.0, "Updated synopsis");
+        MovieDto result = movieTools.updateMovie(1L, "Inception - Remastered", "Christopher Nolan", "Sci-Fi", 2010, 9.0, "Updated synopsis");
 
         assertNotNull(result);
         assertEquals("Inception - Remastered", result.title());
@@ -218,11 +211,70 @@ class MovieMcpToolsTest {
     @Test
     @DisplayName("deleteMovie MCP tool should invoke service delete")
     void testDeleteMovie() {
-        String response = managementTools.deleteMovie(1L);
+        String response = movieTools.deleteMovie(1L);
 
         verify(movieService).delete(1L);
         assertTrue(response.contains("successfully deleted"));
     }
+
+    // ==========================================
+    // GenreTools Tests
+    // ==========================================
+
+    @Test
+    @DisplayName("getAllGenres MCP tool should return all genres")
+    void testGetAllGenres() {
+        when(movieService.findAllGenres()).thenReturn(List.of("Action", "Drama", "Sci-Fi"));
+
+        List<String> genres = genreTools.getAllGenres();
+
+        assertEquals(3, genres.size());
+        assertEquals("Action", genres.get(0));
+        verify(movieService).findAllGenres();
+    }
+
+    @Test
+    @DisplayName("getMoviesByGenre MCP tool should filter by genre")
+    void testGetMoviesByGenre() {
+        when(movieService.findByGenre("Sci-Fi")).thenReturn(List.of(sampleMovie));
+
+        List<MovieDto> result = genreTools.getMoviesByGenre("Sci-Fi");
+
+        assertEquals(1, result.size());
+        assertEquals("Sci-Fi", result.get(0).genre());
+        verify(movieService).findByGenre("Sci-Fi");
+    }
+
+    // ==========================================
+    // AudienceTools Tests
+    // ==========================================
+
+    @Test
+    @DisplayName("getAllAudiences MCP tool should return all audience ratings")
+    void testGetAllAudiences() {
+        when(movieService.findAllAudiences()).thenReturn(List.of("PG-13", "R", "TE - Todo Espectador"));
+
+        List<String> audiences = audienceTools.getAllAudiences();
+
+        assertEquals(3, audiences.size());
+        assertEquals("PG-13", audiences.get(0));
+        verify(movieService).findAllAudiences();
+    }
+
+    @Test
+    @DisplayName("getMoviesByAudience MCP tool should filter by audience")
+    void testGetMoviesByAudience() {
+        when(movieService.findByAudience("PG-13")).thenReturn(List.of(sampleMovie));
+
+        List<MovieDto> result = audienceTools.getMoviesByAudience("PG-13");
+
+        assertEquals(1, result.size());
+        verify(movieService).findByAudience("PG-13");
+    }
+
+    // ==========================================
+    // MovieRecommendationTools Tests
+    // ==========================================
 
     @Test
     @DisplayName("getCatalogResource MCP resource should format catalog as text")
