@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.venefast.springboot</groupId>
-	<artifactId>mcpserver</artifactId>
+	<artifactId>movie-mcp-server</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Movie MCP Server of Spring AI</name>
+	<name>movie-mcp-server</name>
 	<description>Model Context Protocol (MCP) server for movie catalog management using Spring AI and Spring Boot</description>
 	<url/>
 	<licenses>

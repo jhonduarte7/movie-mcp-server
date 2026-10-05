@@ -1,4 +1,4 @@
-# Movie MCP Server of Spring AI
+# movie-mcp-server - Movie MCP Server of Spring AI
 
 A Spring Boot 4 application leveraging **Spring AI 2.0.1** and **Java 25** to expose a movie catalog management system through the **Model Context Protocol (MCP)** and a RESTful API.
 

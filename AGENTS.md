@@ -6,9 +6,9 @@ This document describes the agent skills, architecture rules, project structure,
 
 ## 1. Project Overview
 
-- **Project Name**: Movie MCP Server of Spring AI
+- **Project Name**: movie-mcp-server
 - **Group ID**: `com.venefast.springboot`
-- **Artifact ID**: `mcpserver`
+- **Artifact ID**: `movie-mcp-server`
 - **Base Package**: `com.venefast.springboot.mcpserver.app`
 - **Java Version**: Java 25 (Amazon Corretto 25 LTS)
 - **Spring Boot Version**: 4.1.0
