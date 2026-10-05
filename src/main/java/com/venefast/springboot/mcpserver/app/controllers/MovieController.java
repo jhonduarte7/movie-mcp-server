@@ -66,7 +66,7 @@ public class MovieController {
     }
 
     /**
-     * Filters movies by genre.
+     * Filters movies by genre / category.
      *
      * @param genre genre name
      * @return 200 OK with movies belonging to the genre
@@ -74,6 +74,39 @@ public class MovieController {
     @GetMapping("/genre/{genre}")
     public ResponseEntity<List<MovieDto>> getMoviesByGenre(@PathVariable String genre) {
         return ResponseEntity.ok(movieService.findByGenre(genre));
+    }
+
+    /**
+     * Filters movies by audience classification.
+     *
+     * @param audience audience classification keyword
+     * @return 200 OK with matching movies
+     */
+    @GetMapping("/audience/{audience}")
+    public ResponseEntity<List<MovieDto>> getMoviesByAudience(@PathVariable String audience) {
+        return ResponseEntity.ok(movieService.findByAudience(audience));
+    }
+
+    /**
+     * Retrieves screening schedules for a specific movie.
+     *
+     * @param id movie ID
+     * @return 200 OK with list of showtimes
+     */
+    @GetMapping("/{id}/schedules")
+    public ResponseEntity<List<String>> getMovieSchedules(@PathVariable Long id) {
+        return ResponseEntity.ok(movieService.getMovieSchedules(id));
+    }
+
+    /**
+     * Retrieves screening schedules for a movie by its title (case-insensitive).
+     *
+     * @param title movie title
+     * @return 200 OK with schedule description or non-existence message
+     */
+    @GetMapping("/schedule")
+    public ResponseEntity<String> getMovieScheduleByTitle(@RequestParam String title) {
+        return ResponseEntity.ok(movieService.getMovieScheduleByTitle(title));
     }
 
     /**

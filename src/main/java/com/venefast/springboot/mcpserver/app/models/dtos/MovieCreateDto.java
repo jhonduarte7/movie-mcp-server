@@ -12,13 +12,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Immutable DTO record representing movie payload contract.
- * Includes duration, normalized categories (genres), audience, and showtimes (schedules).
- * Excludes internal database audit fields (createdAt, updatedAt).
+ * Specialized DTO record for Movie creation requests.
+ * Encapsulates validation constraints for creating catalog entries without database IDs.
+ * Used primarily by MovieManagementTools and creation REST endpoints.
  */
-public record MovieDto(
-    Long id,
-
+public record MovieCreateDto(
     @NotBlank(message = "Title is required")
     @Size(max = 150, message = "Title must not exceed 150 characters")
     String title,
@@ -52,36 +50,16 @@ public record MovieDto(
     String synopsis
 ) {
     /**
-     * Compact constructor helper for creating a basic MovieDto without ID, schedules, or audience.
+     * Convenience constructor with primary fields.
      */
-    public MovieDto(String title, String director, String genre, Integer releaseYear, Double rating, String synopsis) {
+    public MovieCreateDto(String title, String director, String genre, Integer releaseYear, Double rating, String synopsis) {
         this(
-            null,
             title,
             director,
             "120 min",
             genre,
             (genre != null && !genre.isBlank()) ? List.of(genre) : Collections.emptyList(),
-            null,
-            Collections.emptyList(),
-            releaseYear,
-            rating,
-            synopsis
-        );
-    }
-
-    /**
-     * Helper constructor with ID and basic fields for backwards compatibility with tests and callers.
-     */
-    public MovieDto(Long id, String title, String director, String genre, Integer releaseYear, Double rating, String synopsis) {
-        this(
-            id,
-            title,
-            director,
-            "120 min",
-            genre,
-            (genre != null && !genre.isBlank()) ? List.of(genre) : Collections.emptyList(),
-            null,
+            "TE - Todo Espectador",
             Collections.emptyList(),
             releaseYear,
             rating,

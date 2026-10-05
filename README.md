@@ -6,16 +6,19 @@ A Spring Boot 4 application leveraging **Spring AI 2.0.1** and **Java 25** to ex
 
 ## 🌟 Highlights
 
-- **Spring Boot 4.1.0 & Java 25**: Utilizes the latest LTS release and current framework features.
-- **Spring AI Model Context Protocol (MCP)**: Native integration using `spring-ai-starter-mcp-server-webmvc`. Exposes 7 tools, 1 resource, and 1 prompt template over Streamable HTTP transport at `/mcp`.
+- **Spring Boot 4.1.0 & Java 25**: Utilizes the latest LTS release and current Spring Boot 4 framework features.
+- **Spring AI Model Context Protocol (MCP)**: Native integration using `spring-ai-starter-mcp-server-webmvc`. Exposes 12 tools, 1 resource, and 1 prompt template over Streamable HTTP transport at `/mcp`.
+- **Modular MCP Tool Beans**: Decentralized tool layer with 4 dedicated `@Component` beans (`MovieCatalogTools`, `MovieScheduleTools`, `MovieManagementTools`, `MovieRecommendationTools`).
+- **Specialized Task-Based DTOs**: Segregated contracts by role (`MovieCatalogDto`, `MovieScheduleDto`, `MovieCreateDto`, `MovieUpdateDto`, and `MovieDto`).
+- **Normalized Data Architecture**: Relational JPA entities (`Movie`, `Genre`, `Audience`) with screening showtimes collection.
 - **Strict Layered Architecture**: Clear separation of concerns:
   - **Controllers**: Thin REST layer communicating exclusively through immutable DTO records.
   - **Services**: Business logic and transactional boundaries (`@Transactional`).
   - **Repositories**: Spring Data JPA repositories with derived query methods.
   - **Mappers**: Dedicated `@Component` bidirectional converters between entities and DTO records.
   - **Models**: JPA `@Entity` with audit lifecycle callbacks, and immutable `record` DTOs with Bean Validation.
-- **In-Memory H2 Database**: Pre-seeded on startup with 8 classic movies (Inception, The Godfather, Interstellar, Pulp Fiction, Spirited Away, Parasite, The Dark Knight, Blade Runner 2049).
-- **Comprehensive Test Coverage**: 35 automated tests covering controllers, services, repositories, mappers, and MCP tools with 100% pass rate.
+- **In-Memory H2 Database**: Pre-seeded on startup with 10 classic movies with normalized categories, audience classifications, and screening showtimes.
+- **Comprehensive Test Coverage**: 57 automated tests covering controllers, services, repositories, mappers, and MCP tools with 100% pass rate.
 
 ---
 
@@ -31,19 +34,41 @@ src/main/java/com/venefast/springboot/mcpserver/app/
 ├── mappers/
 │   └── MovieMapper.java
 ├── mcp/
-│   └── MovieMcpTools.java
+│   └── tools/
+│       ├── MovieCatalogTools.java
+│       ├── MovieManagementTools.java
+│       ├── MovieRecommendationTools.java
+│       └── MovieScheduleTools.java
 ├── models/
 │   ├── dtos/
-│   │   └── MovieDto.java
+│   │   ├── MovieDto.java
+│   │   ├── MovieCatalogDto.java
+│   │   ├── MovieScheduleDto.java
+│   │   ├── MovieCreateDto.java
+│   │   └── MovieUpdateDto.java
 │   └── entities/
+│       ├── Audience.java
+│       ├── Genre.java
 │       └── Movie.java
 ├── repositories/
+│   ├── AudienceRepository.java
+│   ├── GenreRepository.java
 │   └── MovieRepository.java
 └── services/
     ├── MovieService.java
     └── impl/
         └── MovieServiceImpl.java
 ```
+
+### 🧩 Modular DTOs & Tool Responsibilities
+
+| DTO Record | Path | Associated Tool Component | Responsibility |
+| :--- | :--- | :--- | :--- |
+| `MovieCatalogDto` | `models/dtos/MovieCatalogDto.java` | `MovieCatalogTools` | Lightweight browsing, filtering, and summary overviews |
+| `MovieScheduleDto` | `models/dtos/MovieScheduleDto.java` | `MovieScheduleTools` | Structured showtimes, schedules, and contextual availability messages |
+| `MovieCreateDto` | `models/dtos/MovieCreateDto.java` | `MovieManagementTools` | Creation command contract with Bean Validation constraints |
+| `MovieUpdateDto` | `models/dtos/MovieUpdateDto.java` | `MovieManagementTools` | Update command contract with Bean Validation constraints |
+| `MovieDto` | `models/dtos/MovieDto.java` | `MovieController` & Base | Full canonical representation for REST endpoints and backwards compatibility |
 
 ---
 
@@ -79,7 +104,7 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 {
   "mcpServers": {
     "movie-mcp-server": {
-      "url": "http://localhost:8080/mcp"
+      "url": "http://localhost:8090/mcp"
     }
   }
 }
@@ -94,10 +119,15 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 | **Tool** | `getMoviesByGenre` | Find movies belonging to a genre (Sci-Fi, Drama, etc.). |
 | **Tool** | `getTopRatedMovies` | Retrieve movies with rating >= threshold. |
 | **Tool** | `getAllMovies` | List all movies in the database. |
-| **Tool** | `addMovie` | Register a new movie into the catalog. |
+| **Tool** | `getCatalogOverview` | List simplified movie overviews (`MovieCatalogDto`) with title, duration, genres, audience, and rating. |
+| **Tool** | `getMovieSchedules` | Retrieve screening showtimes and schedules for a movie by ID. |
+| **Tool** | `getMovieScheduleDetails` | Retrieve structured movie showtimes and screening details (`MovieScheduleDto`) by movie ID. |
+| **Tool** | `mcp_getMovieSchedule` | Search movie by title (case-insensitive) and retrieve schedules or non-existence message. |
+| **Tool** | `addMovie` | Register a new movie into the catalog via `MovieCreateDto`. |
+| **Tool** | `updateMovie` | Update an existing movie by its ID in the catalog via `MovieUpdateDto`. |
 | **Tool** | `deleteMovie` | Delete a movie by its ID. |
-| **Resource** | `movies://catalog` | Plain-text snapshot of the entire movie catalog. |
-| **Prompt** | `movieRecommendationPrompt` | Prompt template for film recommendations by genre. |
+| **Resource** | `movies://catalog` | Plain-text snapshot of the entire movie catalog with categories and showtimes. |
+| **Prompt** | `movieRecommendationPrompt` | Prompt template for film recommendations by genre and schedules. |
 
 ---
 
@@ -109,6 +139,9 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 | `GET` | `/api/movies/{id}` | Get movie by ID |
 | `GET` | `/api/movies/search?title={query}` | Search movies by title |
 | `GET` | `/api/movies/genre/{genre}` | Filter movies by genre |
+| `GET` | `/api/movies/audience/{audience}` | Filter movies by audience classification |
+| `GET` | `/api/movies/{id}/schedules` | Get screening showtimes for a movie by ID |
+| `GET` | `/api/movies/schedule?title={title}` | Get screening showtimes for a movie by title (case-insensitive) |
 | `GET` | `/api/movies/top-rated?minRating={val}` | Top-rated movies |
 | `POST` | `/api/movies` | Create movie |
 | `PUT` | `/api/movies/{id}` | Update movie |
@@ -118,7 +151,7 @@ To connect an MCP client (such as Claude Desktop, Antigravity, or custom MCP cli
 
 #### Create Movie
 ```bash
-curl -X POST http://localhost:8080/api/movies \
+curl -X POST http://localhost:8090/api/movies \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Dune: Part Two",
@@ -132,15 +165,15 @@ curl -X POST http://localhost:8080/api/movies \
 
 #### Search Movie
 ```bash
-curl http://localhost:8080/api/movies/search?title=Inception
+curl http://localhost:8090/api/movies/search?title=Inception
 ```
 
 ---
 
 ## 📊 Management & Database Consoles
 
-- **H2 Web Console**: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
+- **H2 Web Console**: [http://localhost:8090/h2-console](http://localhost:8090/h2-console)
   - JDBC URL: `jdbc:h2:mem:moviedb`
   - User: `sa`
   - Password: *(leave blank)*
-- **Actuator Health**: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
+- **Actuator Health**: [http://localhost:8090/actuator/health](http://localhost:8090/actuator/health)
